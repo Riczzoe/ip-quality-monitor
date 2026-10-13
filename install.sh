@@ -26,7 +26,8 @@ command -v apt-get >/dev/null || {
 
 apt-get update
 DEBIAN_FRONTEND=noninteractive apt-get install -y \
-    bash curl jq bc netcat-openbsd dnsutils iproute2 util-linux coreutils cron
+    bash curl jq bc netcat-openbsd dnsutils iproute2 util-linux coreutils cron \
+    librsvg2-bin fonts-wqy-zenhei
 
 install -d -m 700 -- "$INSTALL_DIR" "$STATE_DIR"
 INSTALL_DIR=$(cd -- "$INSTALL_DIR" && pwd)

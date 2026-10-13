@@ -89,11 +89,18 @@ DIFF_FILE="$WORK_DIR/changes.txt"
 # current.json 尚不存在：上游脚本的 -o 不允许覆盖已有文件。
 curl -fLsS --connect-timeout 15 --max-time 90 \
     https://IP.Check.Place -o "$WORK_DIR/ipquality.sh"
-if ! timeout --kill-after=30s 1800s env TERM=xterm \
-    bash "$WORK_DIR/ipquality.sh" -4 -n -o "$CURRENT_JSON" >"$RUN_LOG" 2>&1; then
-    die 'IPQuality 检测失败，原有 last.json 保持不变。'
+CHECK_RC=0
+timeout --kill-after=30s 1800s env TERM=xterm \
+    bash "$WORK_DIR/ipquality.sh" -4 -n -o "$CURRENT_JSON" >"$RUN_LOG" 2>&1 || CHECK_RC=$?
+# 上游 -4 最后跳过 IPv6 的条件语句会返回 1；完整有效的 JSON 才能视为成功。
+if (( CHECK_RC != 0 && CHECK_RC != 1 )); then
+    cat -- "$RUN_LOG" >&2
+    die "IPQuality 检测失败（退出码 $CHECK_RC），原有 last.json 保持不变。"
 fi
-validate_report "$CURRENT_JSON" || die '检测 JSON 无效，原有 last.json 保持不变。'
+if ! validate_report "$CURRENT_JSON"; then
+    cat -- "$RUN_LOG" >&2
+    die "IPQuality 未生成有效 JSON（退出码 $CHECK_RC），原有 last.json 保持不变。"
+fi
 
 if [[ -f $LAST_JSON ]]; then
     validate_report "$LAST_JSON" || die 'last.json 无效，请检查已有文件。'
@@ -156,9 +163,21 @@ done
 if [[ -n $REPORT_URL ]] &&
     curl -fLsS --connect-timeout 15 --max-time 90 "$REPORT_URL" -o "$WORK_DIR/report.svg" &&
     grep -qi '<svg' "$WORK_DIR/report.svg"; then
-    if ! tg_call sendDocument --form-string "chat_id=$TG_CHAT_ID" \
-        --form "document=@$WORK_DIR/report.svg;type=image/svg+xml" \
-        --form-string 'caption=本次 IP 质量检测报告'; then
+    # 中文等宽字体与基线适配，避免转换后的列错位和文字覆盖背景。
+    sed -e 's/font-family:[^;]*;/font-family: "WenQuanYi Zen Hei Mono", monospace;/' \
+        -e 's/dominant-baseline: central;/dominant-baseline: alphabetic;/' \
+        -e 's/<text /<text dy="0.35em" /g' \
+        "$WORK_DIR/report.svg" >"$WORK_DIR/render.svg"
+    if timeout --kill-after=5s 60s rsvg-convert --width 1600 --keep-aspect-ratio \
+        --background-color '#000000' --output "$WORK_DIR/report.png" "$WORK_DIR/render.svg" &&
+        [[ -s $WORK_DIR/report.png ]]; then
+        if ! tg_call sendPhoto --form-string "chat_id=$TG_CHAT_ID" \
+            --form "photo=@$WORK_DIR/report.png;type=image/png" \
+            --form-string 'caption=本次 IP 质量检测报告'; then
+            NOTICE_FAILED=1
+        fi
+    else
+        printf '%s\n' 'SVG 转 PNG 失败。' >&2
         NOTICE_FAILED=1
     fi
 else
