@@ -38,26 +38,7 @@ REPORT_URL=$(sed -E $'s/\033\\[[0-9;?]*[ -/]*[@-~]//g' "$RUN_LOG" |
 curl -fLsS --connect-timeout 15 --max-time 90 "$REPORT_URL" -o "$WORK_DIR/report.svg" \
     || error_exit 'Failed to download the SVG report.'
 
-sed -e 's/font-family:[^;]*;/font-family: "WenQuanYi Zen Hei Mono", monospace;/' \
-    -e 's/dominant-baseline: central;/dominant-baseline: alphabetic;/' \
-    -e 's/<text /<text dy="0.35em" /g' \
-    "$WORK_DIR/report.svg" >"$WORK_DIR/render.svg"
-
-if dpkg --compare-versions "$RSVG_VERSION" lt 2.58.0; then
-    awk '
-    {
-        while (match($0, /[0-9]+([.][0-9]+)?ch/)) {
-            before = substr($0, 1, RSTART - 1)
-            value = substr($0, RSTART, RLENGTH) + 0
-            after = substr($0, RSTART + RLENGTH)
-            $0 = before sprintf("%gem", value / 2) after
-        }
-        print
-    }' "$RENDER_SVG" >"$WORK_DIR/compat.svg"
-
-    RENDER_SVG="$WORK_DIR/compat.svg"
-fi
-
+RSVG_VERSION=$(rsvg-convert --version | awk '{print $NF}')
 sed -e 's/font-family:[^;}]*;/font-family: "WenQuanYi Zen Hei Mono", monospace;/' \
     -e 's/dominant-baseline: central;/dominant-baseline: alphabetic;/' \
     -e 's/<text /<text dy="0.35em" /g' \
