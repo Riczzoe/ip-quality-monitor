@@ -42,6 +42,41 @@ sed -e 's/font-family:[^;]*;/font-family: "WenQuanYi Zen Hei Mono", monospace;/'
     -e 's/dominant-baseline: central;/dominant-baseline: alphabetic;/' \
     -e 's/<text /<text dy="0.35em" /g' \
     "$WORK_DIR/report.svg" >"$WORK_DIR/render.svg"
+
+if dpkg --compare-versions "$RSVG_VERSION" lt 2.58.0; then
+    awk '
+    {
+        while (match($0, /[0-9]+([.][0-9]+)?ch/)) {
+            before = substr($0, 1, RSTART - 1)
+            value = substr($0, RSTART, RLENGTH) + 0
+            after = substr($0, RSTART + RLENGTH)
+            $0 = before sprintf("%gem", value / 2) after
+        }
+        print
+    }' "$RENDER_SVG" >"$WORK_DIR/compat.svg"
+
+    RENDER_SVG="$WORK_DIR/compat.svg"
+fi
+
+sed -e 's/font-family:[^;}]*;/font-family: "WenQuanYi Zen Hei Mono", monospace;/' \
+    -e 's/dominant-baseline: central;/dominant-baseline: alphabetic;/' \
+    -e 's/<text /<text dy="0.35em" /g' \
+    "$WORK_DIR/report.svg" |
+    if dpkg --compare-versions "$RSVG_VERSION" lt 2.58.0; then
+        awk '
+        {
+            while (match($0, /[0-9]+([.][0-9]+)?ch/)) {
+                before = substr($0, 1, RSTART - 1)
+                value = substr($0, RSTART, RLENGTH) + 0
+                after = substr($0, RSTART + RLENGTH)
+                $0 = before sprintf("%gem", value / 2) after
+            }
+            print
+        }'
+    else
+        cat
+    fi >"$WORK_DIR/render.svg"
+
 timeout --kill-after=5s 60s rsvg-convert --width 1600 --keep-aspect-ratio \
     --background-color '#000000' --output "$WORK_DIR/report.png" "$WORK_DIR/render.svg" \
     || error_exit 'Failed to convert the SVG report to PNG.'
