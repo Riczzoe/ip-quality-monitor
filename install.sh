@@ -4,7 +4,7 @@ umask 077
 
 [[ $EUID == 0 ]] || { printf '%s\n' 'Please run sudo bash install.sh.' >&2; exit 1; }
 SOURCE_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
-MONITOR_SCRIPT='ip_quality_monitor_refactor.sh'
+MONITOR_SCRIPT='ip_quality_monitor.sh'
 # shellcheck source=/dev/null
 source "$SOURCE_DIR/monitor.conf"
 
