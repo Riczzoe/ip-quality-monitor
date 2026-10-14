@@ -13,6 +13,6 @@ sudo bash install.sh
 安装完成后，立即执行一次检查（如果修改了 `INSTALL_DIR`，请替换为对应路径）：
 
 ```bash
-sudo bash /opt/ip-quality-monitor/ip_quality_monitor.sh
+sudo bash /opt/ip-quality-monitor/ip-quality-monitor.sh
 ```
 

@@ -4,7 +4,7 @@ umask 077
 
 [[ $EUID == 0 ]] || { printf '%s\n' 'Please run sudo bash install.sh.' >&2; exit 1; }
 SOURCE_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
-MONITOR_SCRIPT='ip_quality_monitor.sh'
+MONITOR_SCRIPT='ip-quality-monitor.sh'
 # shellcheck source=/dev/null
 source "$SOURCE_DIR/monitor.conf"
 
@@ -12,6 +12,7 @@ error_exit() {
     printf '%s\n' "$*" >&2
     exit 1
 }
+[[ -f $SOURCE_DIR/$MONITOR_SCRIPT ]] || error_exit "Monitor script not found: $SOURCE_DIR/$MONITOR_SCRIPT"
 [[ -n $TG_BOT_TOKEN && -n $TG_CHAT_ID ]] || error_exit 'Please configure Telegram in monitor.conf.'
 [[ $STATE_DIR == /* && $STATE_DIR != / ]] || error_exit 'STATE_DIR must be an absolute path.'
 [[ ${VPS_NAME:-} =~ ^[a-zA-Z0-9_]+$ ]] || error_exit 'VPS_NAME must not be empty.'
